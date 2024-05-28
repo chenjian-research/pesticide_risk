@@ -1,0 +1,180 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from itertools import cycle
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import cross_validate, KFold
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.model_selection import cross_val_score 
+from xgboost import XGBClassifier
+from sklearn.metrics import roc_auc_score
+from sklearn.metrics import roc_curve, auc
+from sklearn.metrics import precision_score
+
+# read data
+dataset=pd.read_csv(r'D:\1work\1 PhD\RFpesticide\algae_test.csv')
+import statsmodels.api as sm
+from statsmodels.stats.outliers_influence import variance_inflation_factor
+data_df = pd.DataFrame(dataset)
+data_df = sm.add_constant(data_df)
+vif = pd.DataFrame()
+vif["Features"] = data_df.columns[1:]
+vif["VIF Factor"] = [variance_inflation_factor(data_df.values, i) for i in range(1, data_df.shape[1])]
+print(vif)
+
+X=dataset.drop('algaerisk',axis=1)
+y=dataset['algaerisk']
+
+# Splitting the dataset into the training set and test set
+scaler=MinMaxScaler()
+X=scaler.fit_transform(X)
+X_train,X_test,y_train,y_test=train_test_split(X,y,test_size=0.2,random_state=60,stratify=y)
+skf = KFold(n_splits=10,shuffle=True, random_state=1412)
+
+# five candidate models
+from xgboost import XGBClassifier
+xgbcmodel=XGBClassifier()
+xgbcmodel.fit(X_train,y_train)
+from sklearn.ensemble import RandomForestClassifier
+rfcmodel=RandomForestClassifier()
+rfcmodel.fit(X_train,y_train)
+from sklearn.neighbors import KNeighborsClassifier
+knn_model=KNeighborsClassifier()
+knnmodel.fit(X_train,y_train)
+from sklearn.svm import SVC
+svcmodel=SVC()
+svcmodel.fit(X_train,y_train)
+from sklearn.neural_network import MLPClassifier
+NNmodel= MLPClassifier()
+NNmodel.fit(X_train,y_train)
+print("\tXGBoost：",cross_val_score(xgbc_model,X_train,y_train,cv=skf).mean())
+print("\tRandomforst：",cross_val_score(rfc_model,X_train,y_train,cv=skf).mean())
+print("\tKNN：",cross_val_score(knn_model,X_train,y_train,cv=skf).mean())
+print("\tSVC：",cross_val_score(svc_model,X_train,y_train,cv=skf).mean())
+print("\tNN：",cross_val_score(NN_model,X_train,y_train,cv=skf).mean())
+#chose the XGBoost model
+
+scorel = []
+for i in range(20,600,1):
+    xgb1 = XGBClassifier(n_estimators=i, objective='multi:softmax',num_class=4,seed=70)
+    score = cross_val_score(xgb1, X_train, y_train, cv=skf).mean()
+    scorel.append(score)
+print(max(scorel),(scorel.index(max(scorel))))
+plt.figure(figsize=[20,5])
+plt.plot(range(20,600,1),scorel)
+plt.show()
+
+xgb_model = XGBClassifier(objective='multi:softmax', num_class=4,seed=70)
+param_grid = {
+    'n_estimators':[300],
+    'max_depth': list(range(4, 10, 1)),
+    'learning_rate': [0.005,0.01,0.05,0.1,0.2,0.3,0.4,0.5],
+    'subsample': [0.7,0.8, 0.9,1.0],
+    'colsample_bytree': [0.8, 0.9,1.0],
+    'scale_pos_weight': [0.8, 0.9,1.0],
+    'min_child_weight': [0.8, 0.9,1.0],
+    'gamma': [0, 0.1],
+}
+
+grid_search = GridSearchCV(estimator=xgb_model, param_grid=param_grid, cv=skf, scoring='accuracy')
+grid_search.fit(X_train, y_train)
+print("Best Parameters: ", grid_search.best_params_)
+print("Best Score: ", grid_search.best_score_)
+
+#final XGBoost model
+xgb=XGBClassifier(n_estimators=300, learning_rate=0.1,max_depth=8,min_child_weight=1,gamma=0,subsample=0.8,
+                  scale_pos_weight=1,colsample_bytree=1,objective='multi:softmax',num_class=4,seed=70)
+
+#performance of XGBoost model
+y_test_binary = label_binarize(y_test, classes=range(4)) 
+xgb.fit(X_train, y_train)
+y_score = xgb.predict_proba(X_test)
+auc_scores = []
+for i in range(4):
+    auc = roc_auc_score(y_test_binary[:, i], y_score[:, i])
+    auc_scores.append(auc)
+for i in range(4):
+    print("Class", i, "AUC:", auc_scores[i])
+y_pred = xgb.predict(X_test)
+accuracy = accuracy_score(y_test, y_pred)
+print("Accuracy:", accuracy)
+
+#plot the ROC curves
+y_score = xgb.predict_proba(X_test)
+fpr = dict()
+tpr = dict()
+roc_auc = dict()
+class_names = ['No risk', 'Low risk', 'Moderate risk', 'High risk'] 
+
+for i in range(4):
+    fpr[i], tpr[i], _ = roc_curve(y_test_binary[:, i], y_score[:, i])
+    roc_auc[i] = auc(fpr[i], tpr[i])
+fpr["micro"], tpr["micro"], _ = roc_curve(y_test_binary.ravel(), y_score.ravel())
+roc_auc["micro"] = auc(fpr["micro"], tpr["micro"])
+
+plt.figure(figsize=(6, 5))
+rcParams.update({'font.size': 14, 'font.family': 'Times New Roman'})
+colors = ['green', 'yellow', 'orange','red']
+for i, color in zip(range(4), colors):
+    plt.plot(fpr[i], tpr[i], color=color, lw=2,
+             label='{} (AUC = {:.2f})'.format(class_names[i], roc_auc[i]))
+plt.plot(fpr["micro"], tpr["micro"], color='deeppink', linestyle='--', lw=2,
+         label='Micro-average (AUC = {:.2f})'.format(roc_auc["micro"]))
+plt.plot([0, 1], [0, 1], color='gray', lw=1, linestyle='--')
+plt.xlim([0.0, 1.0])
+plt.ylim([0.0, 1.05])
+plt.xlabel('False Positive Rate', fontsize=14)
+plt.ylabel('True Positive Rate', fontsize=14)
+plt.title('Receiver Operating Characteristic (ROC)', fontsize=14)
+plt.legend(loc="lower right", fontsize=12)
+plt.show()
+
+#SHAP analysis
+import shap
+import xgboost
+shap.initjs()
+explainer=shap.TreeExplainer(xgb)
+shap_values = explainer.shap_values(X_train)
+shap.summary_plot(shap_values, X_train)
+shap.dependence_plot('cropland', shap_values[3],X_train,interaction_index=None, ax=ax, show=False)
+shap.dependence_plot('manure', shap_values[3],X_train,interaction_index=None, ax=ax, show=False)
+
+#Causal Analysis
+from econml.solutions.causal_analysis import CausalAnalysis
+from econml.metalearners import TLearner
+from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import OneHotEncoder
+
+X2=X_train
+Y2=y_train
+
+scaler = StandardScaler()
+X3 = pd.DataFrame(scaler.fit_transform(X2), columns=X2.columns)
+encoder = OneHotEncoder()
+Y_encoded = encoder.fit_transform(Y2.values.reshape(-1, 1)).toarray()
+causal_models = []
+
+for i in range(Y_encoded.shape[1]):
+    ca = CausalAnalysis(
+        feature_inds=X3.columns,
+        categorical=[],
+        classification=False, 
+        nuisance_models="automl",
+        heterogeneity_model="linear",
+        random_state=123,
+        n_jobs=-1
+    )
+    causal_models.append(ca)
+
+for i in range(Y_encoded.shape[1]):
+    causal_models[i].fit(X3, Y_encoded[:, i])
+
+global_summs = []
+for i in range(Y_encoded.shape[1]):
+    global_summ = causal_models[i].global_causal_effect(alpha=0.05)
+    global_summ = global_summ.sort_values(by="p_value")
+    global_summs.append(global_summ)
+print(global_summ)
+
