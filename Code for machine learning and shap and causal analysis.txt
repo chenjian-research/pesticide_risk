@@ -68,7 +68,7 @@ plt.show()
 
 xgb_model = XGBClassifier(objective='multi:softmax', num_class=4,seed=70)
 param_grid = {
-    'n_estimators':[300],
+    'n_estimators':[90],
     'max_depth': list(range(4, 10, 1)),
     'learning_rate': [0.005,0.01,0.05,0.1,0.2,0.3,0.4,0.5],
     'subsample': [0.7,0.8, 0.9,1.0],
@@ -84,7 +84,7 @@ print("Best Parameters: ", grid_search.best_params_)
 print("Best Score: ", grid_search.best_score_)
 
 #final XGBoost model
-xgb=XGBClassifier(n_estimators=300, learning_rate=0.1,max_depth=8,min_child_weight=1,gamma=0,subsample=0.8,
+xgb=XGBClassifier(n_estimators=90, learning_rate=0.1,max_depth=8,min_child_weight=1,gamma=0,subsample=0.8,
                   scale_pos_weight=1,colsample_bytree=1,objective='multi:softmax',num_class=4,seed=70)
 
 #performance of XGBoost model
