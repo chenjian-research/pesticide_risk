@@ -1,1 +1,1 @@
-Raw data and code for the Manuscript"Optimizing agricultural inputs to minimize pesticide mixture risk in global surface water"
+Raw data and code for the Manuscript"Global hazard from pesticide mixture to invertebrate and alga in surface water"
