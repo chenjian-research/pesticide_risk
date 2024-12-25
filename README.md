@@ -1,1 +1,1 @@
-Raw data and code for the Manuscript"Global hazard from pesticide mixture to invertebrate and alga in surface water"
+Raw data and code for the Article "Mitigating pesticide mixture hazard in global surface waters through agricultural management", One Earth, 2024
