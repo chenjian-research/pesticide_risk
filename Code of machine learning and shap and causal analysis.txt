@@ -1,3 +1,4 @@
+#Code of machine learning model for the Article "Mitigating pesticide mixture hazard in global surface waters through agricultural management"
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
