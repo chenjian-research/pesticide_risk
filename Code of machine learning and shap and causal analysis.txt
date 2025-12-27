@@ -29,8 +29,6 @@ X=dataset.drop('algaerisk',axis=1)
 y=dataset['algaerisk']
 
 # Splitting the dataset into the training set and test set
-scaler=MinMaxScaler()
-X=scaler.fit_transform(X)
 X_train,X_test,y_train,y_test=train_test_split(X,y,test_size=0.2,random_state=60,stratify=y)
 skf = KFold(n_splits=10,shuffle=True, random_state=1412)
 
@@ -161,7 +159,7 @@ for i in range(Y_encoded.shape[1]):
     ca = CausalAnalysis(
         feature_inds=X3.columns,
         categorical=[],
-        classification=False, 
+        classification=True, 
         nuisance_models="automl",
         heterogeneity_model="linear",
         random_state=123,
@@ -178,4 +176,5 @@ for i in range(Y_encoded.shape[1]):
     global_summ = global_summ.sort_values(by="p_value")
     global_summs.append(global_summ)
 print(global_summ)
+
 
